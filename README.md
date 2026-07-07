@@ -50,7 +50,6 @@ PLN_BACKEND/
 └── normas_rag/                # manuais ABNT do RAG (PDFs não versionados)
 
 resultados/                    # notebooks EXECUTADOS (com gráficos/tabelas visíveis no GitHub)
-RELATORIO_PROJETO.md           # relatório técnico detalhado
 ```
 
 O notebook `pipeline_abnt_funcoes_oficial.ipynb` é a **fonte da verdade**; o
