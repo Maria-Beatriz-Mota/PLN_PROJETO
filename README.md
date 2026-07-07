@@ -100,9 +100,7 @@ verificação humana (25 artigos × 19 seções):
 | Micro    | 0.92     | 0.90     | 0.96   | **0.93** |
 | Macro    | —        | 0.76     | 0.76   | 0.75 |
 
-Reprodução na seção 17 do notebook de apresentação. A metodologia da avaliação
-combina anotação automática (baseada em inventário de headings) com anotação
-humana independente, com divergências adjudicadas pela autora.
+Reprodução na seção 17 do notebook de apresentação.
 
 ## Dados não versionados
 
