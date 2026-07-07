@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+
+# Data e Modelos
+data/
+models/
+temp/
+*.pdf
+*.docx
+*.csv
+*.pkl
+*.joblib
+
+# Exceção: dados de avaliação (gabarito) devem ser versionados
+!PLN_PROJETO_FINAL/gabarito_secoes.csv
+!PLN_PROJETO_FINAL/gabarito_secoes_template.csv
+!PLN_PROJETO_FINAL/gabarito_revisao_pendente.csv
+!PLN_PROJETO_FINAL/gabarito_artigos_pdfs.csv
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db

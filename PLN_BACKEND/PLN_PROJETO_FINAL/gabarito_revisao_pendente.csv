@@ -1,0 +1,17 @@
+﻿indice_df,secao,pipeline,claude,acao,motivo
+indice_df,secao,pipeline,claude,acao,motivo
+145,introducao,1,0,DISCORDANCIA,Tem sim a introdução começa assim o artigo: Introdução Aceratotomia radial (RK) foi uma importante alternativa cirúrgica nos anos 1970 e 1980 desde a publicação de Fiodorov. Metodologia tá como Caso clinico e não tem referencial teorico porém está dentro dos conformes do artigo e  a conclusão c está dentro de discussões (depende do orientador ou do tipo de revista).
+956,palavras_chave,1,0,DISCORDANCIA,desconsiderar como artigo pois é uma errata
+1087,varios locais,1,0,DISCORDANCIA, está certo resultar em varios erros e está sem as regras pois é uma resenha e não um artigo. Não é valido para o analisador(pipeline)
+2011,introducao e outras,1,0,DISCORDANCIA, tem introdução sim então o pipeline acertou. tá okay só que como tá com resumo e abstract como anexo a ordem ficou trocada o abstract e o reumo aparecem no final do artigo e não no inicio como deveria ser.mas tá okay o resto e não tem resultados e dicussões mas tá implicito dentro dos topicos do texto(com nomenclaturas especificas do texto então ach0o que fica okay pelo contextop o mesmo segue para metodos. Mas tá okay.
+91,metodologia,1,INCERTO,VERIFICAR,sem heading proprio; conteudo pode estar em secao fundida ou no relato do caso, está em relato de caso sim.
+977,resultados,0,INCERTO,VERIFICAR,sem heading proprio; conteudo pode estar no caso/analise, está sim dentro da analise
+1061,conclusao,1,INCERTO,VERIFICAR,possivel equivalente ('LICOES E REFLEXOES' etc.) sem heading, canonico aceitar licções e refelxoes como conclusão.
+1100,conclusao,1,INCERTO,VERIFICAR,possivel equivalente ('LICOES E REFLEXOES' etc.),aceitar licções e refelxxoes como conclusão  porem alarmar que não a clareza da divisão das seções
+2471,resultados discussao metodologia data_submissao e palavras_chave,0,INCERTO,VERIFICAR,sem heading proprio; conteudo pode estar no caso/analise., está dentro de analise. tem palavras chaves sim. tem referencial teorico tem metodologia (acredito está mescaldo a metodologia com o rreferencial teorico) resultados e discussões estão dentro do escopo, no caso separado por analise empirica e estatistica e em conclusões.
+509,metodologia,1,INCERTO,VERIFICAR,sem heading proprio; conteudo pode estar em secao fundida ou no relato do caso, é em relato de caso
+2527,resultados,0,verificado,VERIFICAR, Tem sim a introdução começa assim o artigo: Metodologia tá como Caso clinico e não tem referencial teorico porém está dentro dos conformes do artigo e a conclusão está dentro de discussões (depende do orientador ou do tipo de revista).
+2847,resumo,1,verificado,VERIFICAR,não tem referencial teorico e não tem abstract mas tem resumo em pt. porém o resto dentro dos conformes do artigo a discussão está dentro de resultado pode ser o criterio da revista. e conclusão como considerações finais.
+2881,resumo e resultados,1,verifacado,VERIFICAR, não tem referencial teorico e não tem abstract mas tem resumo em pt. porém o resto dentro dos conformes do artigo a discussão está dentro de resultado pode ser o criterio da revista. e conclusão como considerações finais.
+91,discussao,0,1,DISCORDANCIA, é um artigo de revisão um poco fora do escopo do pipeline. porem a seção comentario seria a conclusão do artigo. de toda forma não é um artigo experado pelo pippeline.
+857,autores resumo conclusao referencias e introducao,1,0,DISCORDANCIA, não tem nada. apenas uma lista de pareceristas então tá totalmente errado deve ser jogado fora. não é um artigo

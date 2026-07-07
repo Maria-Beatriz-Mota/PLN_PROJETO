@@ -1,0 +1,54 @@
+# ==== Segredos ====
+.env
+*.env
+!.env.example
+
+# ==== Corpus e dados grandes (NÃO versionar) ====
+# Textos completos dos artigos coletados (CSV de ~130 MB)
+PLN_BACKEND/PLN_SCIELO/
+artigos_validos.csv
+artigos_completo.csv
+artigos_limpos.csv
+
+# PDFs (corpus de artigos + manuais de normalização do RAG)
+*.pdf
+
+# Arquivos compactados e apresentações
+*.rar
+*.zip
+*.7z
+*.pptx
+
+# ==== Banco de dados (regenerado ao rodar o app) ====
+*.db
+*.sqlite
+*.sqlite3
+
+# ==== Índice RAG (regenerável via rag_abnt.construir_indice) ====
+PLN_BACKEND/normas_rag/indice_normas_embeddings.npy
+PLN_BACKEND/normas_rag/indice_normas_chunks.json
+
+# ==== Vetores FastText (não usado; muito grande) ====
+cc.pt.300.bin
+*.bin
+
+# ==== Backups gerados durante o trabalho ====
+*.bak
+*.backup.csv
+
+# ==== Python ====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# ==== Jupyter ====
+.ipynb_checkpoints/
+
+# ==== SO / editor ====
+.DS_Store
+Thumbs.db
+desktop.ini
+Untitled-1.ipynb

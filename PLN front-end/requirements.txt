@@ -1,0 +1,47 @@
+# =========================
+# Front-end Streamlit
+# =========================
+streamlit>=1.30
+
+# Extração de texto de artigos
+pymupdf>=1.24        # PDF (import fitz)
+python-docx>=1.1     # DOCX
+
+# =========================
+# Pipeline ABNT (pipeline_abnt.py) -- OBRIGATÓRIAS
+# =========================
+# Sem estas, o import de pipeline_abnt.py falha (usadas no topo do modulo,
+# fora de qualquer try/except). Sem pins rigidos de versao antiga: o
+# ambiente roda em Python 3.13, que nao tem wheels prontas para as versoes
+# historicas do backend original (ex.: transformers==4.36.2/torch==2.1.2
+# exigiam compilar tokenizers do zero). Use versoes recentes.
+numpy>=2.0
+pandas>=2.2
+torch>=2.9
+spacy>=3.8
+rapidfuzz>=3.0
+scikit-learn>=1.4
+transformers>=4.40
+
+# =========================
+# Pipeline ABNT -- toleradas em falta no código (try/except com fallback),
+# mas necessárias para a qualidade real da análise (sem elas, a validação
+# semântica híbrida, o filtro de idioma e o LLM hospedado ficam desativados)
+# =========================
+sentence-transformers>=3.0   # BERTimbau-STS (validação semântica híbrida)
+langdetect>=1.0.9            # fallback de detecção de idioma
+huggingface_hub>=0.24        # LLM hospedado (Mistral-7B via Inference API)
+
+# =========================
+# Pipeline ABNT -- opcionais de verdade (degradam graciosamente para None
+# se ausentes; cada camada correspondente é simplesmente pulada)
+# =========================
+gensim>=4.3        # FastText PT pré-treinado (Jaccard semântico)
+keybert>=0.8        # extração de palavras-chave
+bert-score>=0.3.13   # métrica BERTScore por seção
+ollama>=0.3          # fallback local do LLM (se a API hospedada falhar)
+
+# =========================
+# Passo manual (NÃO é pip install): baixa o modelo grande do spaCy em PT.
+#   python -m spacy download pt_core_news_lg
+# =========================

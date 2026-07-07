@@ -1,0 +1,6 @@
+# Tema claro fixo: os cards customizados (utils/styles.py) têm fundo branco,
+# e com o tema escuro os widgets nativos (expander, tabelas, inputs) destoavam
+# e o texto herdado ficava branco sobre branco. O CSS também define cores
+# explícitas como defesa em profundidade caso o tema mude.
+[theme]
+base = "light"
