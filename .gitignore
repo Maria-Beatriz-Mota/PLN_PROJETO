@@ -36,6 +36,9 @@ cc.pt.300.bin
 *.bak
 *.backup.csv
 
+# ==== Relatório interno (não publicar no GitHub) ====
+RELATORIO_PROJETO.md
+
 # ==== Python ====
 __pycache__/
 *.py[cod]

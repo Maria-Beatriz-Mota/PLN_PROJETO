@@ -100,8 +100,9 @@ verificação humana (25 artigos × 19 seções):
 | Micro    | 0.92     | 0.90     | 0.96   | **0.93** |
 | Macro    | —        | 0.76     | 0.76   | 0.75 |
 
-Reprodução na seção 17 do notebook de apresentação. Detalhes de metodologia,
-análise de erros e limitações em [`RELATORIO_PROJETO.md`](RELATORIO_PROJETO.md).
+Reprodução na seção 17 do notebook de apresentação. A metodologia da avaliação
+combina anotação automática (baseada em inventário de headings) com anotação
+humana independente, com divergências adjudicadas pela autora.
 
 ## Dados não versionados
 
@@ -125,4 +126,4 @@ LLM `meta-llama/Llama-3.1-8B-Instruct` (fallback Ollama).
 
 Pesos/thresholds fixados a priori (sem calibração); base do RAG são manuais
 universitários (não o texto oficial da ABNT); avaliação da qualidade do feedback
-LLM ainda qualitativa. Ver relatório técnico para a lista completa.
+LLM ainda qualitativa.
