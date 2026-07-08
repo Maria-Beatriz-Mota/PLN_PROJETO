@@ -1223,6 +1223,36 @@ def combinar_score_validacao_semantica(
 _score_semantico_ponderado = combinar_score_validacao_semantica
 
 
+def _melhor_bloco_para_secao(texto: str, label: str, tokenizer, model,
+                             min_palavras: int = 25) -> str:
+    """Quando o heading da secao NAO foi detectado, procura o bloco
+    (paragrafo) mais parecido com a frase de referencia da secao, em vez de
+    embutir o texto INTEIRO -- que dilui o sinal e faz secoes sem titulo
+    (ex.: conclusao, metodologia) se perderem no meio do artigo. Retorna o
+    texto do melhor bloco, ou "" se nada util."""
+    frase_ref = CONTEUDO_REFERENCIA.get(label)
+    if not frase_ref or model is None:
+        return ""
+    blocos = [b.strip() for b in re.split(r"\n{2,}", texto)
+              if len(b.split()) >= min_palavras]
+    if not blocos:
+        return ""
+    try:
+        ref_emb = _chunk_encode(frase_ref, tokenizer, model)
+    except Exception:
+        return ""
+    melhor_txt, melhor_sim = "", -1.0
+    for bloco in blocos:
+        try:
+            emb = _chunk_encode(bloco[:1500], tokenizer, model)
+        except Exception:
+            continue
+        sim = _cosseno(emb, ref_emb)
+        if sim > melhor_sim:
+            melhor_sim, melhor_txt = sim, bloco
+    return melhor_txt
+
+
 def validar_secao_obrigatoria_semantica(
     texto_completo: str,
     secoes_detectadas: dict,
@@ -1254,6 +1284,13 @@ def validar_secao_obrigatoria_semantica(
         )
         fim = proximas[0] if proximas else len(texto_completo)
         texto_secao = texto_completo[inicio:fim].strip()
+    elif bert_disponivel:
+        # Heading nao detectado: busca o bloco mais parecido com a secao em
+        # vez de usar o texto inteiro (que diluia o sinal e impedia captar,
+        # p.ex., a conclusao presente sem titulo).
+        texto_secao = _melhor_bloco_para_secao(
+            texto_completo, label, tokenizer, model
+        ) or texto_completo
     else:
         texto_secao = texto_completo
 
@@ -1819,6 +1856,15 @@ def detectar_secoes_estrutural_hibrida(texto, nlp=None, tokenizer=None, model=No
             metodos[label] = "zero_shot_nli"
             sec[f"_score_zero_shot_{label}"] = info["score_zero_shot"]
 
+    # Discussao fundida: "Resultados e discussao" e um heading unico que o
+    # regex atribui so a resultados; registra discussao na mesma posicao para
+    # nao subcontar a discussao (caso comum em artigos brasileiros).
+    if "discussao" not in sec:
+        _m_fus = re.search(r"(?im)^\s*\d*\.?\s*resultados?\s+e\s+discuss[aã]o\s*$", texto)
+        if _m_fus:
+            sec["discussao"] = _m_fus.start()
+            metodos["discussao"] = "fundida_resultados_discussao"
+
     for label, metodo in metodos.items():
         sec[f"_metodo_{label}"] = metodo
     for label, titulo in titulos_det.items():
@@ -2297,11 +2343,9 @@ def analisar_lexico(
         por_secao[label]["jaccard_score"] = jdata["jaccard"]
         por_secao[label]["indicador_lexical"] = jdata["indicador_lexical"]
 
-    # Jaccard semantico (FastText) -- opcional, complementa o lexico acima
-    jaccard_semantico_por_secao = calcular_jaccard_semantico_secoes(por_secao, ft_model)
-    for label, jdata in jaccard_semantico_por_secao.items():
-        por_secao[label]["jaccard_semantico"] = jdata["jaccard_semantico"]
-        por_secao[label]["matches_semanticos"] = jdata["matches_semanticos"]
+    # Jaccard semantico (FastText) removido do pipeline: o FastText foi
+    # desativado (cc.pt.300.bin ~2h de carga) e o metrico caia como NaN.
+    # O Jaccard lexico (match exato) acima continua ativo.
 
     # Termos-chave via KeyBERT -- opcional, ao lado do tfidf_top_terms (nao o substitui)
     if kw_model is not None:
@@ -2316,16 +2360,26 @@ def analisar_lexico(
         "similaridade_lexical_media": sim_media,
         "ngram_range_usado":          str(ngram_range),
         "jaccard_por_secao":          jaccard_por_secao,
-        "jaccard_semantico_por_secao": jaccard_semantico_por_secao,
     }
 
 
 print("analisar_lexico (bow_top_terms, tfidf_top_terms, indicador_lexical) carregada.")
 
+# Secoes de CORPO usadas na matriz de coerencia. Metadados (titulo, autores,
+# doi, data, palavras-chave, abstract) e a lista de referencias nao sao
+# conteudo argumentativo -- inclui-los distorce a matriz (ex.: "autores",
+# quando detectado na lista de referencias, correlaciona alto e espuriamente
+# com "resultados").
+SECOES_CORPO_COERENCIA = {
+    "introducao", "referencial_teorico", "metodologia",
+    "resultados", "discussao", "conclusao",
+}
+
+
 def analisar_coerencia_semantica(texto, secoes, tokenizer, model, threshold=0.50):
-    """Similaridade coseno entre pares de seções (BERTimbau). Inalterado."""
+    """Similaridade coseno entre pares de SECOES DE CORPO (BERTimbau)."""
     secoes_validas = {k: v for k, v in secoes.items()
-                      if not k.startswith('_') and isinstance(v, int)}
+                      if k in SECOES_CORPO_COERENCIA and isinstance(v, int)}
     if len(secoes_validas) < 2:
         return {"erro": "Menos de 2 seções válidas", "labels": [], "matriz": [],
                 "media_por_secao": {}, "secoes_problemas": []}
@@ -2491,33 +2545,46 @@ def extrair_entidades_lenerbr(texto: str, ner_pipeline) -> dict:
     return entidades
 
 
-def extrair_entidades(texto: str, nlp, ner_pipeline_lenerbr=None) -> dict:
-    """Extrai entidades nomeadas, complementado por extracao de datas via
-    regex (ver extrair_datas_regex).
+_RE_FIM_ZONA_AUTORIA = re.compile(
+    r"(?im)^\s*(resumo|abstract|resumen|palavras[- ]chave|keywords?)\b"
+)
 
-    PER/ORG/LOC: preferencialmente via LeNER-BR (`ner_pipeline_lenerbr`), se
-    fornecido -- mais preciso que o spaCy generico para esse contexto. Sem
-    LeNER-BR, cai para o NER nativo do spaCy (PER/LOC/ORG/MISC).
+
+def _zona_autoria(texto: str, max_chars: int = 1200) -> str:
+    """Zona de autoria: do inicio do texto ate o primeiro heading de
+    Resumo/Abstract/Palavras-chave (onde ficam titulo, autores e afiliacoes),
+    limitada a `max_chars`. E onde os nomes de autores realmente aparecem --
+    muito mais limpa que os 5000 chars crus para o NER de pessoas."""
+    m = _RE_FIM_ZONA_AUTORIA.search(texto)
+    fim = m.start() if m else max_chars
+    return texto[:min(fim, max_chars)].strip()
+
+
+def extrair_entidades(texto: str, nlp, ner_pipeline_lenerbr=None) -> dict:
+    """Extrai entidades nomeadas.
+
+    Para AUTORES/INSTITUICOES usa o spaCy (pt_core_news_lg, dominio geral do
+    portugues) sobre a ZONA DE AUTORIA limpa -- o LeNER-BR e treinado em texto
+    juridico e confundia nome de autor com ORGANIZACAO no bloco de autoria.
+    `ner_pipeline_lenerbr` fica so como fallback quando o spaCy nao esta
+    disponivel. Datas via regex (extrair_datas_regex).
     """
-    texto_ner = texto[:5000]
+    zona = _zona_autoria(texto)
     entidades = {}
 
-    if ner_pipeline_lenerbr is not None:
-        entidades = extrair_entidades_lenerbr(texto_ner, ner_pipeline_lenerbr)
+    if nlp is not None and zona:
+        try:
+            doc = nlp(zona)
+            for ent in doc.ents:
+                entidades.setdefault(ent.label_, []).append(ent.text)
+        except Exception as e:
+            return {"erro": str(e)}
+    elif ner_pipeline_lenerbr is not None:
+        entidades = extrair_entidades_lenerbr(zona, ner_pipeline_lenerbr)
+    else:
+        return {"erro": "Nenhum modelo de NER disponível (spaCy e LeNER-BR ausentes)"}
 
-    if not entidades:
-        if nlp is None:
-            if ner_pipeline_lenerbr is None:
-                return {"erro": "Nenhum modelo de NER disponível (spaCy e LeNER-BR ausentes)"}
-        else:
-            try:
-                doc = nlp(texto_ner)
-                for ent in doc.ents:
-                    entidades.setdefault(ent.label_, []).append(ent.text)
-            except Exception as e:
-                return {"erro": str(e)}
-
-    datas = extrair_datas_regex(texto_ner)
+    datas = extrair_datas_regex(texto[:5000])
     if datas:
         entidades["DATA"] = datas
     return entidades
@@ -2665,15 +2732,6 @@ def agregar_indicadores(
         if jacs:
             jaccard_medio = round(float(np.mean(jacs)), 4)
 
-    # Jaccard semântico médio (FastText, aceita sinônimos)
-    jaccard_semantico_medio = np.nan
-    jaccard_sem_por_secao = lexico.get("jaccard_semantico_por_secao", {}) if isinstance(lexico, dict) else {}
-    if jaccard_sem_por_secao:
-        jacs_sem = [v["jaccard_semantico"] for v in jaccard_sem_por_secao.values()
-                    if isinstance(v, dict) and "jaccard_semantico" in v]
-        if jacs_sem:
-            jaccard_semantico_medio = round(float(np.mean(jacs_sem)), 4)
-
     # Termos científicos extraídos do abstract via SciERC (Task/Method/Metric/Material)
     n_termos_cientificos_abstract = (
         sum(len(v) for v in entidades_cientificas_abstract.values())
@@ -2702,7 +2760,6 @@ def agregar_indicadores(
                                           if isinstance(ner_resultado, dict) else np.nan,
         "ordem_secoes_correta":           resumo.get("ordem_secoes", {}).get("ordem_correta", None),
         "ordem_secoes_pares_fora_de_ordem": resumo.get("ordem_secoes", {}).get("pares_fora_de_ordem", []),
-        "jaccard_semantico_medio":         jaccard_semantico_medio,
         "n_termos_cientificos_abstract":   n_termos_cientificos_abstract,
         "detalhes_hibrido":               det_hibr,
     }
@@ -2746,9 +2803,25 @@ _RE_DIR_PAREN = re.compile(
     re.DOTALL | re.IGNORECASE,
 )
 
+# Verbos que introduzem citacao (diretas e indiretas) -- lista ampliada.
+_VERBOS_INTRO = (
+    r"Segundo|De\s+acordo\s+com|Conforme|Consoante|Para|"
+    r"Na\s+vis[ãa]o\s+de|Na\s+perspectiva\s+de|No\s+entendimento\s+de|"
+    r"Nas\s+palavras\s+de|Como\s+(?:afirma|destaca|aponta|observa|ressalta|salienta)"
+)
+
+# Citacao direta introduzida por verbo: "Segundo Silva (2020, p.3), 'x'".
 _RE_DIR_INTRO = re.compile(
-    rf"(?:Segundo|De\s+acordo\s+com|Conforme|Para|Nas\s+palavras\s+de)\s+"
+    rf"(?:{_VERBOS_INTRO})\s+"
     rf"{_S_AUTORS}\s*\(\s*{_S_ANO}(?:\s*,\s*{_S_PAG})?\)\s*,?\s*"
+    rf"{_QO}.{{5,600}}?{_QC}",
+    re.DOTALL | re.IGNORECASE,
+)
+
+# Citacao direta com a chamada autor-data ANTES da aspa, com dois-pontos ou
+# nao: "Silva (2020, p. 3): 'x'" ou "Silva (2020) 'x'".
+_RE_DIR_AUTOR_ANTES = re.compile(
+    rf"{_S_AUTORS}\s*\(\s*{_S_ANO}(?:\s*,\s*{_S_PAG})?\)\s*[:,]?\s*"
     rf"{_QO}.{{5,600}}?{_QC}",
     re.DOTALL | re.IGNORECASE,
 )
@@ -2764,8 +2837,7 @@ _RE_IND_TEXTUAL = re.compile(
 )
 
 _RE_IND_INTRO = re.compile(
-    rf"(?:Segundo|De\s+acordo\s+com|Conforme|Para|Na\s+visão\s+de|"
-    rf"Nas\s+palavras\s+de|Corroborando)\s+"
+    rf"(?:{_VERBOS_INTRO}|Corroborando)\s+"
     rf"{_S_AUTORS}(?:\s*\(\s*{_S_ANO}\s*\))?",
     re.IGNORECASE,
 )
@@ -2780,19 +2852,24 @@ def avaliar_conformidade_citacoes_nbr10520(texto: str) -> dict:
     """Avalia conformidade basica de citacoes diretas e indiretas segundo a NBR 10520."""
     txt = str(texto)
 
-    dir_paren = _RE_DIR_PAREN.findall(txt)
-    dir_intro = _RE_DIR_INTRO.findall(txt)
-    diretas_trechos = dir_paren + dir_intro
+    # Coleta os matches dos 3 padroes de citacao direta e remove
+    # sobreposicoes -- "Segundo Silva (2020), 'x'" seria contado 2x (pelo
+    # padrao com verbo E pelo autor-antes) sem a dedup.
+    _cand_dir = []
+    for _padrao_dir in (_RE_DIR_INTRO, _RE_DIR_PAREN, _RE_DIR_AUTOR_ANTES):
+        for m in _padrao_dir.finditer(txt):
+            _cand_dir.append((m.start(), m.end(), m.group(0)))
+    _cand_dir.sort(key=lambda s: (s[0], -(s[1] - s[0])))
+    diretas_trechos, spans_dir = [], []
+    for a, b, g in _cand_dir:
+        if any(not (b <= x or a >= y) for x, y in spans_dir):
+            continue
+        spans_dir.append((a, b))
+        diretas_trechos.append(g)
 
     dir_com_pag = sum(1 for t in diretas_trechos if _tem_pagina_simples(t))
     dir_sem_pag = len(diretas_trechos) - dir_com_pag
     n_dir = len(diretas_trechos)
-
-    spans_dir = set()
-    for m in _RE_DIR_PAREN.finditer(txt):
-        spans_dir.add(m.span())
-    for m in _RE_DIR_INTRO.finditer(txt):
-        spans_dir.add(m.span())
 
     def _sobrepos(st: int, en: int) -> bool:
         return any(s0 <= st <= s1 or s0 <= en <= s1 for s0, s1 in spans_dir)
