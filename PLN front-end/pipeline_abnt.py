@@ -182,19 +182,35 @@ def _montar_prompt_llm_analise(texto_artigo: str, resultado_sistema: dict,
                     )
 
     bloco_rag = f"\n{rag_contexto}\n" if rag_contexto else ""
-    instrucao_rag = (
-        "- Fundamente as recomendações nos trechos de manuais ABNT fornecidos, "
-        "citando a norma correspondente (NBR 6022 ou NBR 10520) quando aplicável.\n"
-        if rag_contexto else ""
-    )
 
     instrucao_reescrita = (
         "- Para cada trecho de baixa coesão fornecido acima, escolha 1-2 frases "
         "problemáticas e proponha uma reescrita no formato \"Antes: ...\" / "
         "\"Sugestão de reescrita: ...\" "
-        "(as reescritas podem vir em tópicos, além dos parágrafos).\n"
+        "(as reescritas podem vir em tópicos).\n"
         if trechos_problematicos else ""
     )
+
+    if rag_contexto:
+        # Modo RAG (mostrado ao usuario no site): analise tecnica detalhada --
+        # com a mesma profundidade da versao sem RAG -- MAIS uma parte de
+        # fundamentacao citando as normas recuperadas.
+        instrucoes_finais = (
+            "Estruture a resposta em DUAS partes claramente separadas:\n\n"
+            "**Parte 1 - Análise técnica** (detalhada, como uma análise sem consulta a "
+            "normas): diagnóstico geral, pontos positivos, pontos de melhoria e "
+            "sugestões práticas sobre o artigo.\n\n"
+            "**Parte 2 - Fundamentação nas normas ABNT**: para cada ponto de melhoria da "
+            "Parte 1, cite o trecho da norma correspondente (NBR 6022 ou NBR 10520) dos "
+            "manuais fornecidos que justifica a recomendação.\n\n"
+            "Seja detalhado; não resuma em excesso."
+        )
+    else:
+        # Modo baseline (somente para avaliacao interna, nao exibido ao usuario).
+        instrucoes_finais = (
+            "Organize em: Diagnóstico geral, Pontos positivos, Pontos de melhoria e "
+            "Sugestões práticas. Seja detalhado."
+        )
 
     return f"""Você é um especialista em análise de artigos científicos seguindo normas ABNT/NBR 6022.
 
@@ -210,8 +226,8 @@ Trecho do artigo (primeiros 1500 chars):
 Instruções:
 - Não contradiga os dados do sistema acima.
 - Identifique pontos positivos e pontos de melhoria.
-- Dê sugestões práticas e objetivas.
-{instrucao_reescrita}{instrucao_rag}- Máximo de 4 parágrafos.
+- Dê sugestões práticas, objetivas e detalhadas.
+{instrucao_reescrita}{instrucoes_finais}
 """
 
 
@@ -253,7 +269,7 @@ def chamar_llm_analise_abnt(
             client = InferenceClient(model=modelo, token=token)
             resposta = client.chat_completion(
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=700,
+                max_tokens=5000,
             )
             conteudo = resposta.choices[0].message.content
             if conteudo and conteudo.strip():

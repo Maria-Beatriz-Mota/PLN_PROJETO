@@ -85,16 +85,10 @@ st.caption(f"{len(texto_colado)} caracteres colados")
 # =========================
 # BOTÃO
 # =========================
-usar_rag = st.checkbox(
-    "📚 Fundamentar o feedback nas normas ABNT (RAG)",
-    value=st.session_state.get("usar_rag", False),
-    help="Recupera trechos de manuais de normalização (NBR 6022/10520) e "
-         "instrui a LLM a citar a norma nas recomendações. Desmarcado = "
-         "baseline sem RAG (para comparação).",
-)
-
+# O usuário sempre recebe o feedback fundamentado nas normas (RAG). A versão
+# sem RAG é gerada apenas nos scripts de avaliação (comparação pareada), não
+# no fluxo do site.
 if st.button("✨ Analisar Artigo", use_container_width=True):
-    st.session_state["usar_rag"] = usar_rag
 
     if uploaded_file is None and texto_colado.strip() == "":
         st.warning("Por favor, envie um arquivo ou cole o texto.")

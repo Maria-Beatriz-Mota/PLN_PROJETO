@@ -75,7 +75,7 @@ if "resultado" not in st.session_state:
     st.session_state["resultado"] = analisar_abnt(
         texto,
         progress_callback=_atualizar_progresso,
-        usar_rag=st.session_state.get("usar_rag", False),
+        usar_rag=True,  # usuário sempre recebe o feedback com RAG
     )
     barra_progresso.progress(1.0, text="Análise concluída (100%)")
     barra_progresso.empty()
