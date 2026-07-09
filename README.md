@@ -20,14 +20,18 @@ seção e **feedback textual gerado por LLM** em duas variantes comparáveis:
 - **Validação semântica híbrida** — combina score léxico e cosseno de embeddings
   BERTimbau-STS (peso 0,15/0,85) para classificar as seções obrigatórias.
 - **Análises complementares** — BoW/TF-IDF por seção, coerência semântica entre
-  seções, citações NBR 10520, NER (LeNER-BR / SciERC) e BERTScore.
+  seções de corpo, citações NBR 10520, NER de autores/instituições (spaCy PER/ORG
+  na zona de autoria) e termos científicos (SciERC, no abstract) e BERTScore.
 - **Feedback via LLM** — Llama-3.1-8B (Hugging Face Inference API) com fallback
   local (Ollama). Inclui sinal de coesão e sugestões de reescrita "Antes /
-  Sugestão".
+  Sugestão". Amostragem: `temperature=0.3`, `top_p=0.90`, `max_tokens=1200`
+  (calibrados para evitar respostas incoerentes).
 - **RAG** — recupera trechos de manuais de normalização ABNT relevantes aos
-  problemas detectados e fundamenta o feedback citando a norma.
-- **Front-end Streamlit** — upload de PDF/DOCX/TXT, diagnóstico visual, histórico
-  de análises e toggle sem/com RAG.
+  problemas detectados e fundamenta o feedback citando a norma. **O usuário final
+  sempre recebe a versão com RAG**; a versão sem RAG é gerada apenas nos scripts
+  de avaliação (comparação pareada em `feedback_llm`, coluna `rag_ativo`).
+- **Front-end Streamlit** — upload de PDF/DOCX/TXT, diagnóstico visual, barra de
+  progresso e histórico de análises persistido em SQLite.
 
 ## Estrutura do repositório
 
@@ -91,13 +95,21 @@ rag_abnt.construir_indice(modelo=modelo)
 
 ## Avaliação quantitativa
 
-Detecção de presença de seções avaliada sobre gabarito de anotação assistida com
-verificação humana (25 artigos × 19 seções):
+Detecção de presença de seções, sobre dois gabaritos:
+
+**Gabarito assistido/estrutural** (25 artigos × 19 seções — anotação assistida com
+verificação humana):
 
 | Agregado | Acurácia | Precisão | Recall | F1 |
 |----------|----------|----------|--------|-----|
 | Micro    | 0.92     | 0.90     | 0.96   | **0.93** |
 | Macro    | —        | 0.76     | 0.76   | 0.75 |
+
+**Gabarito de conteúdo** (18 artigos — anotação humana **independente**, por
+conteúdo mesmo sem heading). Concordância entre anotadores: **Cohen's kappa =
+0.70** (substancial). Contra esse gabarito, as correções do pipeline elevaram o
+detector de **F1 0.885 → 0.938** (recall 0.807 → 0.901), com ganhos concentrados
+em metodologia e resultados (busca por conteúdo quando não há heading ABNT).
 
 Reprodução na seção 17 do notebook de apresentação.
 
@@ -114,8 +126,9 @@ Excluídos via `.gitignore` (regenerar/obter à parte):
 
 ## Modelos utilizados
 
-spaCy `pt_core_news_lg` · BERTimbau-STS `rufimelo/Legal-BERTimbau-sts-base` ·
-NER `pierreguillou/ner-bert-base-cased-pt-lenerbr` e `RJuro/SciNERTopic` ·
+spaCy `pt_core_news_lg` (NER de autores/instituições + similaridade de headings) ·
+BERTimbau-STS `rufimelo/Legal-BERTimbau-sts-base` (validação semântica, coerência,
+embeddings do RAG) · NER científico `RJuro/SciNERTopic` (SciERC, no abstract) ·
 zero-shot `MoritzLaurer/mDeBERTa-v3-base-mnli-xnli` ·
 LLM `meta-llama/Llama-3.1-8B-Instruct` (fallback Ollama).
 
@@ -123,4 +136,5 @@ LLM `meta-llama/Llama-3.1-8B-Instruct` (fallback Ollama).
 
 Pesos/thresholds fixados a priori (sem calibração); base do RAG são manuais
 universitários (não o texto oficial da ABNT); avaliação da qualidade do feedback
-LLM ainda qualitativa.
+LLM ainda qualitativa; a seção Discussão tem detecção parcial quando fundida em
+"Resultados e discussão".

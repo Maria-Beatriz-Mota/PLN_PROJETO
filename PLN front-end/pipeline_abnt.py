@@ -203,13 +203,16 @@ def _montar_prompt_llm_analise(texto_artigo: str, resultado_sistema: dict,
             "**Parte 2 - Fundamentação nas normas ABNT**: para cada ponto de melhoria da "
             "Parte 1, cite o trecho da norma correspondente (NBR 6022 ou NBR 10520) dos "
             "manuais fornecidos que justifica a recomendação.\n\n"
-            "Seja detalhado; não resuma em excesso."
+            "Seja detalhado, mas CONCISO: cubra os pontos com profundidade e "
+            "ENCERRE quando a análise estiver completa. Não repita ideias, não "
+            "prolongue com frases vagas nem invente conteúdo."
         )
     else:
         # Modo baseline (somente para avaliacao interna, nao exibido ao usuario).
         instrucoes_finais = (
             "Organize em: Diagnóstico geral, Pontos positivos, Pontos de melhoria e "
-            "Sugestões práticas. Seja detalhado."
+            "Sugestões práticas. Seja detalhado, mas conciso: encerre quando a "
+            "análise estiver completa, sem repetir nem inventar conteúdo."
         )
 
     return f"""Você é um especialista em análise de artigos científicos seguindo normas ABNT/NBR 6022.
@@ -269,7 +272,11 @@ def chamar_llm_analise_abnt(
             client = InferenceClient(model=modelo, token=token)
             resposta = client.chat_completion(
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=5000,
+                max_tokens=1200,
+                temperature=0.3,   # baixa temperatura: evita a "salada de
+                                   # palavras" multilingue (degradacao por
+                                   # amostragem alta) nas respostas longas.
+                top_p=0.90,
             )
             conteudo = resposta.choices[0].message.content
             if conteudo and conteudo.strip():
